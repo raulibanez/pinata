@@ -90,4 +90,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Trusted by 🙌
 
-[![Sin Oficina | Coworking Online](/images/sinoficina.png)](https://sinoficina.com/) [![Meetup](/images/meetup.png)](https://www.meetup.com/)
+[![Sin Oficina | Coworking Online](/images/sinoficina.png)](https://sinoficina.com/) [![Meetup](/images/meetup.png)](https://www.meetup.com/) [![Duolingo](/images/duolingo.png)](https://www.duolingo.com/)
