@@ -17,7 +17,7 @@
 
 ## Official Website 🌍
 
-> You can use Piñata for free. Feel free to add it to your server on Discord. You can also join [our Discord server](https://discord.gg/XMdrNExKRJ) for help.
+> You can use Piñata for free. Feel free to add it to your server on Discord. You can also join [our Discord server](https://discord.gg/XMdrNExKRJ).
 
 [getpinata.com](http://getpinata.com) 🪅
 
