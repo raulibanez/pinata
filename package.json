@@ -1,0 +1,33 @@
+{
+  "name": "pinata",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node .",
+    "dev": "set NODE_ENV=dev&&chcp 65001 && nodemon app.js | pino-pretty -t SYS:standard",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raulibanez/pinata.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/raulibanez/pinata/issues"
+  },
+  "homepage": "https://github.com/raulibanez/pinata#readme",
+  "dependencies": {
+    "@discordjs/rest": "^1.2.0",
+    "better-sqlite3": "^7.6.2",
+    "crypto": "^1.0.1",
+    "dedent-js": "^1.0.1",
+    "discord-api-types": "^0.37.11",
+    "discord.js": "^14.8.0",
+    "dotenv": "^16.0.2",
+    "i18n": "^0.15.1",
+    "pino": "^8.6.0",
+    "pino-pretty": "^9.1.0"
+  }
+}
