@@ -4,13 +4,13 @@
 
 [Piñata](http://getpinata.com) is a Discord bot crafted to facilitate random pairings among members within a Discord server, aiming to foster a more interconnected and engaging community environment.
 
-- **Energize Your Community:** Transform your Discord server with Piñata, encouraging consistent interaction and participation among members.
-- **Ramp Up Engagement:** Witness a significant boost in activity and engagement levels within your server with the help of Piñata.
-- **Perfect Icebreaker:** Piñata serves as an ideal tool to help new members integrate and feel part of the community from day one.
-- **Deepen Your Community Ties:** Forge stronger relationships and uncover the interests and personalities of your community members.
-- **Discover New Friendships:** Piñata acts as a perfect bridge, fostering new friendships and connections within your server.
-- **Cultivate Unique Group Dynamics:** Keep your community tight-knit and active by experimenting with different group dynamics and activities.
-- **Encourage Interaction:** Motivate members to engage with each other, creating a more friendly and welcoming environment.
+- **Energize Your Community:** Boost your Discord server's interaction with Piñata.
+- **Ramp Up Engagement:** Increase server activity and engagement using Piñata.
+- **Perfect Icebreaker:** Piñata helps newcomers feel integrated from day one.
+- **Deepen Ties:** Strengthen bonds and learn more about your members with Piñata.
+- **Find New Friends:** Piñata fosters friendships and connections within your server.
+- **Unique Dynamics:** Enhance community cohesion with diverse activities through Piñata.
+- **Boost Interaction:** Create a welcoming space for all members to engage.
 
 [![Add to Discord](/images/addtodiscord.png)](URL-del-enlace1)
 [![Documentation](/images/documentation.png)](URL-del-enlace2)
