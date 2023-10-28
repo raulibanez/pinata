@@ -12,8 +12,8 @@
 - **Unique Dynamics:** Enhance community cohesion with diverse activities through Piñata.
 - **Boost Interaction:** Create a welcoming space for all members to engage.
 
-[![Add to Discord](/images/addtodiscord.png)](URL-del-enlace1)
-[![Documentation](/images/documentation.png)](URL-del-enlace2)
+[![Add to Discord](/images/addtodiscord.png)](https://discord.com/api/oauth2/authorize?client_id=1024371079621398568&permissions=2048&scope=bot)
+[![Documentation](/images/documentation.png)](https://pinatabot.notion.site/Documentation-2836444843434da8bdd89e3311c7c171)
 
 ## Official Website 🌍
 
