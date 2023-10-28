@@ -87,3 +87,7 @@ For production environments, it is recommended to use pm2 as a process manager f
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Trusted by 🙌
+
+[![Sin Oficina | Coworking Online](/images/sinoficina.png)](https://sinoficina.com/) [![Meetup](/images/meetup.png)](https://www.meetup.com/)
