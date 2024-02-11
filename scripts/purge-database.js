@@ -16,15 +16,15 @@ function deleteGuild(guildId) {
 
 // Function to identify and process inactive guilds
 function cleanupGuilds() {
-  const monthAgo = new Date();
-  monthAgo.setMonth(monthAgo.getMonth() - 1); // Set to one month ago
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - 30); // Subtract 30 days from the current date
 
   // Get guilds that have been inactive for more than a month
   const selectStmt = db.prepare(dedent`
     SELECT guild_id FROM guilds
     WHERE active = 0 AND datetime(left_at) <= datetime(?)
   `);
-  const inactiveGuilds = selectStmt.all(monthAgo.toISOString());
+  const inactiveGuilds = selectStmt.all(daysAgo.toISOString());
 
   // Process each inactive guild
   inactiveGuilds.forEach((guild) => {
