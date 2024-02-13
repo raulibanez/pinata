@@ -84,6 +84,10 @@ npm start
 
 For production environments, it is recommended to use pm2 as a process manager for Node.js applications.
 
+## Data Purge
+
+Piñata respects privacy and manages data efficiently through a data purge mechanism. A script located at `scripts/purge-database.js` is designed to delete data related to guilds and their members from which the bot has been removed. This script will purge data from guilds that have been inactive for 24 hours. However, please note that this script does not run automatically. It needs to be scheduled to run daily using a task scheduler like cron jobs or similar tools. This ensures that any data related to a guild or its members is not retained unnecessarily, aligning with our commitment to privacy and efficient data management.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
