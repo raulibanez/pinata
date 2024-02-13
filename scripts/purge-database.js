@@ -17,7 +17,7 @@ function deleteGuild(guildId) {
 // Function to identify and process inactive guilds
 function cleanupGuilds() {
   const daysAgo = new Date();
-  daysAgo.setDate(daysAgo.getDate() - 30); // Subtract 30 days from the current date
+  daysAgo.setDate(daysAgo.getDate() - 1); // Subtract 1 days from the current date
 
   // Get guilds that have been inactive for more than a month
   const selectStmt = db.prepare(dedent`
