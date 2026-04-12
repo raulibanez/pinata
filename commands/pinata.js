@@ -1,11 +1,47 @@
 require('dotenv').config({path: '../.env'});
 const { matchMsg, publicMatchMsg, userLeftMsg } = require('../messages.js');
 const { SlashCommandBuilder } = require('discord.js');
-const { getGuild, getMatch } = require('../db.js');
+const { getGuild, getMatch, getUsers, getHistory, getIgnores, getLatestMatchTimestamp, getMatchedUsersInRound, recordLateMatch } = require('../db.js');
 
 const logger = require('../logger');
 
 const { t } = require('../i18n');
+
+async function tryLateMatch(interaction) {
+    const guild_id = interaction.guild.id;
+    const member_id = interaction.user.id;
+
+    const latestTimestamp = await getLatestMatchTimestamp(guild_id);
+    if (!latestTimestamp) return null;
+
+    const matchedUsers = await getMatchedUsersInRound(guild_id, latestTimestamp);
+
+    const channelUsers = await getUsers(interaction);
+    const ignores = await getIgnores(guild_id);
+
+    const unmatchedUsers = Object.keys(channelUsers)
+        .filter(id => !matchedUsers.includes(id))
+        .filter(id => !ignores.includes(id))
+        .filter(id => id !== member_id);
+
+    if (unmatchedUsers.length === 0) return null;
+
+    const history = await getHistory(interaction);
+
+    // Shuffle candidates
+    const shuffled = [...unmatchedUsers].sort(() => Math.random() - 0.5);
+
+    for (const id of shuffled) {
+        const [first, second] = [member_id, id].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        if (!history[first] || !history[first].includes(second)) {
+            await recordLateMatch(guild_id, member_id, id, latestTimestamp);
+            logger.info({ guild_id, member_id, matched_with: id, timestamp: latestTimestamp }, 'Late match created');
+            return id;
+        }
+    }
+
+    return null;
+}
 
 async function pinata(interaction) {
 	logger.info({
@@ -21,13 +57,22 @@ async function pinata(interaction) {
     const guild = await getGuild(interaction.guild.id);
 
     // Get match
-    const match = await getMatch(interaction);
+    let match = await getMatch(interaction);
+
+    // Late matching: try to pair with another unmatched user
+    if (match.length === 0 && guild.late_matching === 'enabled') {
+        const lateCandidate = await tryLateMatch(interaction);
+        if (lateCandidate) {
+            match = [lateCandidate];
+        }
+    }
 
     let avatarURL;
     switch (match.length) {
         case 0:
             // No match found
-            await interaction.reply({ content: t('No match found', guild.language), ephemeral: (guild.visibility !== 'public') });
+            const noMatchKey = guild.late_matching === 'enabled' ? 'No late match available' : 'No match found';
+            await interaction.reply({ content: t(noMatchKey, guild.language), ephemeral: (guild.visibility !== 'public') });
             return;
         case 1:
             // Match found

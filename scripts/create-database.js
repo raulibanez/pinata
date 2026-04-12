@@ -47,4 +47,10 @@ try {
 console.error(err);
 }
 
+try {
+  db.exec(`ALTER TABLE guilds ADD COLUMN late_matching TEXT DEFAULT NULL`);
+} catch (err) {
+  // Column already exists
+}
+
 db.close();

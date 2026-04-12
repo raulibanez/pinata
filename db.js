@@ -77,8 +77,8 @@ const resetHistory = async (interaction) => {
 }
 
 const addGuild = async (guild) => {
-    const stmt = await db.prepare('INSERT INTO `guilds` (guild_id, guild_name, owner_id, member_count, subscription_plan, premium_tier, active, description, language, api_key, joined_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    await stmt.run(guild.id, guild.name, guild.ownerId, guild.memberCount, 0, guild.premiumTier, 1, guild.description, 'en', crypto.randomBytes(32).toString('base64'), new Date().toISOString());
+    const stmt = await db.prepare('INSERT INTO `guilds` (guild_id, guild_name, owner_id, member_count, subscription_plan, premium_tier, active, description, language, api_key, joined_at, late_matching) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    await stmt.run(guild.id, guild.name, guild.ownerId, guild.memberCount, 0, guild.premiumTier, 1, guild.description, 'en', crypto.randomBytes(32).toString('base64'), new Date().toISOString(), 'enabled');
 }
 
 const getGuild = async (id) => {
@@ -128,6 +128,30 @@ const getIgnores = async (guild_id) => {
     return ignore;
 }
 
+const getLatestMatchTimestamp = async (guild_id) => {
+    const stmt = await db.prepare("SELECT MAX(created) as latest FROM groups WHERE guild_id = ?").bind(guild_id);
+    const row = await stmt.get();
+    return row ? row.latest : null;
+}
+
+const getMatchedUsersInRound = async (guild_id, timestamp) => {
+    const stmt = await db.prepare(
+        "SELECT DISTINCT discord_id FROM (" +
+        "SELECT discord_id1 AS discord_id FROM groups WHERE guild_id = ? AND created = ? " +
+        "UNION " +
+        "SELECT discord_id2 AS discord_id FROM groups WHERE guild_id = ? AND created = ?" +
+        ")"
+    ).bind(guild_id, timestamp, guild_id, timestamp);
+    const rows = await stmt.all();
+    return rows.map(row => row.discord_id);
+}
+
+const recordLateMatch = async (guild_id, user1, user2, timestamp) => {
+    const [first, second] = [user1, user2].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    const insert = await db.prepare('INSERT OR IGNORE INTO groups (guild_id, discord_id1, discord_id2, created) VALUES (?, ?, ?, ?)');
+    await insert.run(guild_id, first, second, timestamp);
+}
+
 module.exports = {
     getMatch,
     getUsers,
@@ -139,5 +163,8 @@ module.exports = {
     updateGuild,
     ignoreUser,
     unignoreUser,
-    getIgnores
+    getIgnores,
+    getLatestMatchTimestamp,
+    getMatchedUsersInRound,
+    recordLateMatch
 };
