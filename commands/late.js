@@ -59,7 +59,7 @@ module.exports = {
 					'Unauthorized user'
 				);
 
-				interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
+				await interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
 			}
 		} catch (error) {
 			logger.error(error, 'Error');
