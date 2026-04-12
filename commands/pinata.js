@@ -7,6 +7,19 @@ const logger = require('../logger');
 
 const { t } = require('../i18n');
 
+function findLateCandidate(memberId, unmatchedUsers, history) {
+    const shuffled = [...unmatchedUsers].sort(() => Math.random() - 0.5);
+
+    for (const id of shuffled) {
+        const [first, second] = [memberId, id].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        if (!history[first] || !history[first].includes(second)) {
+            return id;
+        }
+    }
+
+    return null;
+}
+
 async function tryLateMatch(interaction) {
     const guild_id = interaction.guild.id;
     const member_id = interaction.user.id;
@@ -27,20 +40,14 @@ async function tryLateMatch(interaction) {
     if (unmatchedUsers.length === 0) return null;
 
     const history = await getHistory(interaction);
+    const candidate = findLateCandidate(member_id, unmatchedUsers, history);
 
-    // Shuffle candidates
-    const shuffled = [...unmatchedUsers].sort(() => Math.random() - 0.5);
-
-    for (const id of shuffled) {
-        const [first, second] = [member_id, id].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-        if (!history[first] || !history[first].includes(second)) {
-            await recordLateMatch(guild_id, member_id, id, latestTimestamp);
-            logger.info({ guild_id, member_id, matched_with: id, timestamp: latestTimestamp }, 'Late match created');
-            return id;
-        }
+    if (candidate) {
+        await recordLateMatch(guild_id, member_id, candidate, latestTimestamp);
+        logger.info({ guild_id, member_id, matched_with: candidate, timestamp: latestTimestamp }, 'Late match created');
     }
 
-    return null;
+    return candidate;
 }
 
 async function pinata(interaction) {
@@ -104,6 +111,7 @@ async function pinata(interaction) {
 }
 
 module.exports = {
+	findLateCandidate,
 	data: new SlashCommandBuilder()
 		.setName('pinata')
 		.setDescription('Find out who you are paired with'),

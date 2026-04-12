@@ -56,7 +56,7 @@ function getGroups(users, history) {
 
   // Odd number of users
   // Add the user to the last group
-  if (users_copy.length == 1) {
+  if (users_copy.length == 1 && groups.length > 0) {
     groups[groups.length - 1].push(users_copy[0]);
   }
 
@@ -144,6 +144,8 @@ async function pinata(interaction) {
 }
 
 module.exports = {
+  getGroups,
+  shuffleArray,
   data: new SlashCommandBuilder()
     .setName('match')
     .setDescription('Match users in pairs and post message to channel')
