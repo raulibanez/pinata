@@ -94,7 +94,7 @@ async function pinata(interaction) {
 
     // Get display names
     let matchNames = [];
-    for (id of match) {
+    for (const id of match) {
         try {
             const member = await interaction.guild.members.fetch(id);
             matchNames.push(member.displayName);
