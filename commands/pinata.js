@@ -34,10 +34,14 @@ async function tryLateMatch(interaction) {
     const latestTimestamp = await getLatestMatchTimestamp(guild_id);
     if (!latestTimestamp) return null;
 
+    const ignores = await getIgnores(guild_id);
+
+    // Ignored users must not get a late match either
+    if (ignores.includes(member_id)) return null;
+
     const matchedUsers = await getMatchedUsersInRound(guild_id, latestTimestamp);
 
     const channelUsers = await getUsers(interaction);
-    const ignores = await getIgnores(guild_id);
 
     const unmatchedUsers = Object.keys(channelUsers)
         .filter(id => !matchedUsers.includes(id))
