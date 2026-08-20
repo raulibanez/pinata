@@ -111,6 +111,24 @@ const currentVisibilityMsg = (visibility, lang = 'en') => {
     return visibilityEmbed;
 }
 
+const lateMatchingModifiedMsg = (lang = 'en') => {
+    return t('Late matching has been changed 👍', lang);
+}
+
+const currentLateMatchingMsg = (lateMatching, lang = 'en') => {
+    // Late matching is enabled by default
+    const value = lateMatching ? t(lateMatching, lang) : t('enabled', lang);
+
+    const lateMatchingEmbed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .addFields(
+        { name: t('Late matching', lang), value: value },
+        { name: t('Ayuda', lang), value: t('Utiliza el comando `/late` para activar o desactivar el emparejamiento tardío.', lang) },
+        );
+
+    return lateMatchingEmbed;
+}
+
 module.exports = {
     matchMsg,
     pinataMsg,
@@ -118,5 +136,7 @@ module.exports = {
     currentLanguageMsg,
     publicMatchMsg,
     visibilityModifiedMsg,
-    currentVisibilityMsg
+    currentVisibilityMsg,
+    lateMatchingModifiedMsg,
+    currentLateMatchingMsg
 };

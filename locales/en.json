@@ -32,5 +32,12 @@
 	"public": "Public",
 	"y": "and",
 	"La persona que te había tocado ya no se encuentra en el servidor 😔": "The person you'd been paired with is no longer on the server 😔",
-	"Missing permissions": "Missing permissions"
+	"Missing permissions": "Missing permissions",
+	"Late matching": "Late matching",
+	"Late matching has been changed 👍": "Late matching has been changed 👍",
+	"Utiliza el comando `/late` para activar o desactivar el emparejamiento tardío.": "Use the `/late` command to enable or disable late matching.",
+	"No late match available": "No match available at the moment 🥲",
+	"enabled": "Enabled",
+	"disabled": "Disabled",
+	"Algo ha ido mal 😵 Inténtalo de nuevo en unos minutos": "Something went wrong 😵 Please try again in a few minutes"
 }

@@ -48,6 +48,7 @@ module.exports = {
                     { name: 'Private', value: 'private' },
                     { name: 'Public', value: 'public' }
                 ))
+		.setDMPermission(false)
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 	async execute(interaction) {
 		// Manage interaction

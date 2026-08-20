@@ -36,6 +36,12 @@ const getUsers = async (interaction) => {
     return users;
 }
 
+// Raw history rows (sorted pairs + round timestamp), oldest round first
+const getHistoryRows = async (guild_id) => {
+    const stmt = await db.prepare("SELECT discord_id1, discord_id2, created FROM groups WHERE guild_id = ? ORDER BY created ASC").bind(guild_id);
+    return await stmt.all();
+}
+
 const getHistory = async (interaction) => {
     const stmt = await db.prepare("SELECT * FROM groups WHERE guild_id = ?").bind(interaction.guildId);
     const rows = await stmt.all();
@@ -57,8 +63,9 @@ const recordGroups = async (interaction, groups, history) => {
     // Get date
     const date = new Date().toISOString();
 
-    // Prepare statement
-    const insert = await db.prepare('INSERT or IGNORE INTO groups (guild_id, discord_id1, discord_id2, created) VALUES (?, ?, ?, ?)');
+    // Upsert: repeated pairs must get the new round date, otherwise /pinata
+    // (which looks up pairs by MAX(created)) would not find them
+    const insert = await db.prepare('INSERT INTO groups (guild_id, discord_id1, discord_id2, created) VALUES (?, ?, ?, ?) ON CONFLICT(guild_id, discord_id1, discord_id2) DO UPDATE SET created = excluded.created');
 
     for (let group of groups) { 
         // Split groups into sorted pairs to store in database (e.g. 3 users group)
@@ -77,8 +84,8 @@ const resetHistory = async (interaction) => {
 }
 
 const addGuild = async (guild) => {
-    const stmt = await db.prepare('INSERT INTO `guilds` (guild_id, guild_name, owner_id, member_count, subscription_plan, premium_tier, active, description, language, api_key, joined_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    await stmt.run(guild.id, guild.name, guild.ownerId, guild.memberCount, 0, guild.premiumTier, 1, guild.description, 'en', crypto.randomBytes(32).toString('base64'), new Date().toISOString());
+    const stmt = await db.prepare('INSERT INTO `guilds` (guild_id, guild_name, owner_id, member_count, subscription_plan, premium_tier, active, description, language, api_key, joined_at, late_matching) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    await stmt.run(guild.id, guild.name, guild.ownerId, guild.memberCount, 0, guild.premiumTier, 1, guild.description, 'en', crypto.randomBytes(32).toString('base64'), new Date().toISOString(), 'enabled');
 }
 
 const getGuild = async (id) => {
@@ -128,10 +135,37 @@ const getIgnores = async (guild_id) => {
     return ignore;
 }
 
+const getLatestMatchTimestamp = async (guild_id) => {
+    const stmt = await db.prepare("SELECT MAX(created) as latest FROM groups WHERE guild_id = ?").bind(guild_id);
+    const row = await stmt.get();
+    return row ? row.latest : null;
+}
+
+const getMatchedUsersInRound = async (guild_id, timestamp) => {
+    const stmt = await db.prepare(
+        "SELECT DISTINCT discord_id FROM (" +
+        "SELECT discord_id1 AS discord_id FROM groups WHERE guild_id = ? AND created = ? " +
+        "UNION " +
+        "SELECT discord_id2 AS discord_id FROM groups WHERE guild_id = ? AND created = ?" +
+        ")"
+    ).bind(guild_id, timestamp, guild_id, timestamp);
+    const rows = await stmt.all();
+    return rows.map(row => row.discord_id);
+}
+
+const recordLateMatch = async (guild_id, user1, user2, timestamp) => {
+    const [first, second] = [user1, user2].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    // Upsert: a repeated pair must get the current round date, otherwise /pinata
+    // (which looks up pairs by MAX(created)) would not find it
+    const insert = await db.prepare('INSERT INTO groups (guild_id, discord_id1, discord_id2, created) VALUES (?, ?, ?, ?) ON CONFLICT(guild_id, discord_id1, discord_id2) DO UPDATE SET created = excluded.created');
+    await insert.run(guild_id, first, second, timestamp);
+}
+
 module.exports = {
     getMatch,
     getUsers,
     getHistory,
+    getHistoryRows,
     recordGroups,
     resetHistory,
     addGuild,
@@ -139,5 +173,8 @@ module.exports = {
     updateGuild,
     ignoreUser,
     unignoreUser,
-    getIgnores
+    getIgnores,
+    getLatestMatchTimestamp,
+    getMatchedUsersInRound,
+    recordLateMatch
 };

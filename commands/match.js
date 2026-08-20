@@ -1,6 +1,6 @@
 require('dotenv').config({ path: '../.env' });
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const { getGuild, getUsers, getHistory, recordGroups, getIgnores } = require('../db.js');
+const { getGuild, getUsers, getHistoryRows, recordGroups, getIgnores } = require('../db.js');
 const { pinataMsg } = require('../messages.js');
 
 const logger = require('../logger');
@@ -22,8 +22,9 @@ function getGroups(users, history) {
   let groups = [];
   let users_copy = [...users];
   let tries = 0;
+  const maxTries = Number(process.env.MAX_TRIES) || 5000;
 
-  while (users_copy.length >= 2 && tries < process.env.MAX_TRIES) {
+  while (users_copy.length >= 2 && tries < maxTries) {
     const user = users_copy.pop();
     let pair_with = 0;
 
@@ -56,13 +57,51 @@ function getGroups(users, history) {
 
   // Odd number of users
   // Add the user to the last group
-  if (users_copy.length == 1) {
+  if (users_copy.length == 1 && groups.length > 0) {
     groups[groups.length - 1].push(users_copy[0]);
   }
 
   logger.info(`Pairing process ended after ${tries + 1} attempts`);
 
   return groups;
+}
+
+// Build history object (same shape as db.js getHistory) from raw rows,
+// ignoring the `skip` oldest rounds
+function buildHistory(rows, rounds, skip) {
+  const valid = new Set(rounds.slice(skip));
+  const history = {};
+
+  for (const row of rows) {
+    if (!valid.has(row.created)) continue;
+    if (!history[row.discord_id1]) history[row.discord_id1] = [];
+    history[row.discord_id1].push(row.discord_id2);
+  }
+
+  return history;
+}
+
+// Try to match with brand new pairs only; if the history makes that
+// impossible, progressively allow repeating pairs from the oldest rounds
+function getGroupsAllowingRepeats(users, rows) {
+  if (users.length < 2) return [];
+
+  // Distinct round timestamps, oldest first
+  const rounds = [...new Set(rows.map((row) => row.created))].sort();
+
+  for (let skip = 0; skip <= rounds.length; skip++) {
+    const history = buildHistory(rows, rounds, skip);
+    const groups = getGroups(shuffleArray([...users]), history);
+
+    if (groups.length > 0) {
+      if (skip > 0) {
+        logger.info(`History too dense: allowed repeats from the ${skip} oldest round(s) to complete the matching`);
+      }
+      return groups;
+    }
+  }
+
+  return [];
 }
 
 async function matchUsers(interaction) {
@@ -79,19 +118,16 @@ async function matchUsers(interaction) {
   // Remove ignored users
   ignore.forEach((id) => { delete users[id] });
 
-  // Get history
-  const history = await getHistory(interaction);
+  // Get history rows (pairs + round timestamps)
+  const rows = await getHistoryRows(interaction.guildId);
 
-  // Extract array of user ids and shuffle
-  const user_array = shuffleArray(Object.keys(users));
-
-  // Match users
-  const groups = getGroups(user_array, history);
+  // Match users, allowing repeats of the oldest rounds only if unavoidable
+  const groups = getGroupsAllowingRepeats(Object.keys(users), rows);
 
   logger.info(groups, 'Groups');
 
   // Record pair information into the database
-  await recordGroups(interaction, groups, history);
+  await recordGroups(interaction, groups);
 
   return groups.length;
 }
@@ -144,32 +180,49 @@ async function pinata(interaction) {
 }
 
 module.exports = {
+  getGroups,
+  getGroupsAllowingRepeats,
+  shuffleArray,
   data: new SlashCommandBuilder()
     .setName('match')
     .setDescription('Match users in pairs and post message to channel')
+    .setDMPermission(false)
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction) {
     // Manage interaction
-    //try {
-    // Check if the user is authorized (aka admin)
-    if (interaction.member.permissions.has('ADMINISTRATOR')) {
-      await pinata(interaction);
-    } else {
-      // Logging unauthorized command attempt
-      logger.info(
-        {
-          guild_id: interaction.guildId,
-          guild_name: interaction.guild.name,
-          member_id: interaction.member.id,
-          member_name: interaction.member.user.username,
-        },
-        'Unauthorized user'
-      );
+    try {
+      // Check if the user is authorized (aka admin)
+      if (interaction.member.permissions.has('ADMINISTRATOR')) {
+        await pinata(interaction);
+      } else {
+        // Logging unauthorized command attempt
+        logger.info(
+          {
+            guild_id: interaction.guildId,
+            guild_name: interaction.guild.name,
+            member_id: interaction.member.id,
+            member_name: interaction.member.user.username,
+          },
+          'Unauthorized user'
+        );
 
-      interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
+        await interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
+      }
+    } catch (error) {
+      logger.error(error, 'Error');
+
+      // Inform the user instead of leaving the interaction unanswered
+      // (e.g. GuildMembersTimeout when Discord is slow delivering members)
+      try {
+        const content = t('Algo ha ido mal 😵 Inténtalo de nuevo en unos minutos');
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({ content });
+        } else {
+          await interaction.reply({ content, ephemeral: true });
+        }
+      } catch (replyError) {
+        // Interaction expired or channel unavailable
+      }
     }
-    //} catch (error) {
-    //        logger(error, 'Error');
-    //}
   }
 };
