@@ -1,6 +1,6 @@
 require('dotenv').config({ path: '../.env' });
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const { getGuild, getUsers, getHistory, recordGroups, getIgnores } = require('../db.js');
+const { getGuild, getUsers, getHistoryRows, recordGroups, getIgnores } = require('../db.js');
 const { pinataMsg } = require('../messages.js');
 
 const logger = require('../logger');
@@ -65,6 +65,44 @@ function getGroups(users, history) {
   return groups;
 }
 
+// Build history object (same shape as db.js getHistory) from raw rows,
+// ignoring the `skip` oldest rounds
+function buildHistory(rows, rounds, skip) {
+  const valid = new Set(rounds.slice(skip));
+  const history = {};
+
+  for (const row of rows) {
+    if (!valid.has(row.created)) continue;
+    if (!history[row.discord_id1]) history[row.discord_id1] = [];
+    history[row.discord_id1].push(row.discord_id2);
+  }
+
+  return history;
+}
+
+// Try to match with brand new pairs only; if the history makes that
+// impossible, progressively allow repeating pairs from the oldest rounds
+function getGroupsAllowingRepeats(users, rows) {
+  if (users.length < 2) return [];
+
+  // Distinct round timestamps, oldest first
+  const rounds = [...new Set(rows.map((row) => row.created))].sort();
+
+  for (let skip = 0; skip <= rounds.length; skip++) {
+    const history = buildHistory(rows, rounds, skip);
+    const groups = getGroups(shuffleArray([...users]), history);
+
+    if (groups.length > 0) {
+      if (skip > 0) {
+        logger.info(`History too dense: allowed repeats from the ${skip} oldest round(s) to complete the matching`);
+      }
+      return groups;
+    }
+  }
+
+  return [];
+}
+
 async function matchUsers(interaction) {
   // Get ignore list
   const ignore = await getIgnores(interaction.guildId);
@@ -79,19 +117,16 @@ async function matchUsers(interaction) {
   // Remove ignored users
   ignore.forEach((id) => { delete users[id] });
 
-  // Get history
-  const history = await getHistory(interaction);
+  // Get history rows (pairs + round timestamps)
+  const rows = await getHistoryRows(interaction.guildId);
 
-  // Extract array of user ids and shuffle
-  const user_array = shuffleArray(Object.keys(users));
-
-  // Match users
-  const groups = getGroups(user_array, history);
+  // Match users, allowing repeats of the oldest rounds only if unavoidable
+  const groups = getGroupsAllowingRepeats(Object.keys(users), rows);
 
   logger.info(groups, 'Groups');
 
   // Record pair information into the database
-  await recordGroups(interaction, groups, history);
+  await recordGroups(interaction, groups);
 
   return groups.length;
 }
@@ -145,6 +180,7 @@ async function pinata(interaction) {
 
 module.exports = {
   getGroups,
+  getGroupsAllowingRepeats,
   shuffleArray,
   data: new SlashCommandBuilder()
     .setName('match')

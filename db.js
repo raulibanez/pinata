@@ -36,6 +36,12 @@ const getUsers = async (interaction) => {
     return users;
 }
 
+// Raw history rows (sorted pairs + round timestamp), oldest round first
+const getHistoryRows = async (guild_id) => {
+    const stmt = await db.prepare("SELECT discord_id1, discord_id2, created FROM groups WHERE guild_id = ? ORDER BY created ASC").bind(guild_id);
+    return await stmt.all();
+}
+
 const getHistory = async (interaction) => {
     const stmt = await db.prepare("SELECT * FROM groups WHERE guild_id = ?").bind(interaction.guildId);
     const rows = await stmt.all();
@@ -57,8 +63,9 @@ const recordGroups = async (interaction, groups, history) => {
     // Get date
     const date = new Date().toISOString();
 
-    // Prepare statement
-    const insert = await db.prepare('INSERT or IGNORE INTO groups (guild_id, discord_id1, discord_id2, created) VALUES (?, ?, ?, ?)');
+    // Upsert: repeated pairs must get the new round date, otherwise /pinata
+    // (which looks up pairs by MAX(created)) would not find them
+    const insert = await db.prepare('INSERT INTO groups (guild_id, discord_id1, discord_id2, created) VALUES (?, ?, ?, ?) ON CONFLICT(guild_id, discord_id1, discord_id2) DO UPDATE SET created = excluded.created');
 
     for (let group of groups) { 
         // Split groups into sorted pairs to store in database (e.g. 3 users group)
@@ -156,6 +163,7 @@ module.exports = {
     getMatch,
     getUsers,
     getHistory,
+    getHistoryRows,
     recordGroups,
     resetHistory,
     addGuild,
