@@ -19,12 +19,10 @@
   },
   "homepage": "https://github.com/raulibanez/pinata#readme",
   "dependencies": {
-    "@discordjs/rest": "^1.2.0",
     "better-sqlite3": "^7.6.2",
     "crypto": "^1.0.1",
     "dedent-js": "^1.0.1",
-    "discord-api-types": "^0.37.11",
-    "discord.js": "^14.8.0",
+    "discord.js": "14.14.1",
     "dotenv": "^16.0.2",
     "i18n": "^0.15.1",
     "pino": "^8.6.0",
@@ -32,5 +30,9 @@
   },
   "devDependencies": {
     "jest": "^30.3.0"
+  },
+  "overrides": {
+    "@discordjs/rest": "2.2.0",
+    "undici": "5.29.0"
   }
 }

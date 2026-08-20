@@ -1,8 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config({path: '.env'});
-const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v9');
+const { REST, Routes } = require('discord.js');
 const { BOT_TOKEN, CLIENT_ID } = process.env;
 
 const commands = [];
@@ -13,7 +12,7 @@ for (const file of commandFiles) {
 	commands.push(command.data.toJSON());
 }
 
-const rest = new REST({ version: '9' }).setToken(BOT_TOKEN);
+const rest = new REST().setToken(BOT_TOKEN);
 
 (async () => {
     try {
