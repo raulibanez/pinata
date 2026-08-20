@@ -22,8 +22,9 @@ function getGroups(users, history) {
   let groups = [];
   let users_copy = [...users];
   let tries = 0;
+  const maxTries = Number(process.env.MAX_TRIES) || 5000;
 
-  while (users_copy.length >= 2 && tries < process.env.MAX_TRIES) {
+  while (users_copy.length >= 2 && tries < maxTries) {
     const user = users_copy.pop();
     let pair_with = 0;
 
@@ -185,29 +186,43 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('match')
     .setDescription('Match users in pairs and post message to channel')
+    .setDMPermission(false)
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction) {
     // Manage interaction
-    //try {
-    // Check if the user is authorized (aka admin)
-    if (interaction.member.permissions.has('ADMINISTRATOR')) {
-      await pinata(interaction);
-    } else {
-      // Logging unauthorized command attempt
-      logger.info(
-        {
-          guild_id: interaction.guildId,
-          guild_name: interaction.guild.name,
-          member_id: interaction.member.id,
-          member_name: interaction.member.user.username,
-        },
-        'Unauthorized user'
-      );
+    try {
+      // Check if the user is authorized (aka admin)
+      if (interaction.member.permissions.has('ADMINISTRATOR')) {
+        await pinata(interaction);
+      } else {
+        // Logging unauthorized command attempt
+        logger.info(
+          {
+            guild_id: interaction.guildId,
+            guild_name: interaction.guild.name,
+            member_id: interaction.member.id,
+            member_name: interaction.member.user.username,
+          },
+          'Unauthorized user'
+        );
 
-      interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
+        await interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
+      }
+    } catch (error) {
+      logger.error(error, 'Error');
+
+      // Inform the user instead of leaving the interaction unanswered
+      // (e.g. GuildMembersTimeout when Discord is slow delivering members)
+      try {
+        const content = t('Algo ha ido mal 😵 Inténtalo de nuevo en unos minutos');
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({ content });
+        } else {
+          await interaction.reply({ content, ephemeral: true });
+        }
+      } catch (replyError) {
+        // Interaction expired or channel unavailable
+      }
     }
-    //} catch (error) {
-    //        logger(error, 'Error');
-    //}
   }
 };

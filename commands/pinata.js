@@ -134,13 +134,26 @@ module.exports = {
 	findLateCandidate,
 	data: new SlashCommandBuilder()
 		.setName('pinata')
-		.setDescription('Find out who you are paired with'),
+		.setDescription('Find out who you are paired with')
+		.setDMPermission(false),
 	async execute(interaction) {
 		// Manage interaction
 		try {
 			await pinata(interaction);
 		} catch (error) {
-            logger.error(error, 'Error');
+			logger.error(error, 'Error');
+
+			// Inform the user instead of leaving the interaction unanswered
+			try {
+				const content = t('Algo ha ido mal 😵 Inténtalo de nuevo en unos minutos');
+				if (interaction.deferred || interaction.replied) {
+					await interaction.editReply({ content });
+				} else {
+					await interaction.reply({ content, ephemeral: true });
+				}
+			} catch (replyError) {
+				// Interaction expired or channel unavailable
+			}
 		}
 	}
 };

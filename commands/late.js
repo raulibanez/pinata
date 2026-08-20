@@ -43,6 +43,7 @@ module.exports = {
 					{ name: 'Enabled', value: 'enabled' },
 					{ name: 'Disabled', value: 'disabled' }
 				))
+		.setDMPermission(false)
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 	async execute(interaction) {
 		try {

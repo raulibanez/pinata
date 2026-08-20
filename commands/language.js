@@ -45,6 +45,7 @@ module.exports = {
                     { name: 'Spanish', value: 'es' },
 					{ name: 'French', value: 'fr' }
                 ))
+		.setDMPermission(false)
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 	async execute(interaction) {
 		// Manage interaction

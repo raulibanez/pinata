@@ -20,6 +20,7 @@ module.exports = {
 				.setName('remove')
 				.setDescription('Remove user from the ignore list')
 				.addUserOption(option => option.setName('user').setDescription('Choose user').setRequired(true)))
+		.setDMPermission(false)
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 	async execute(interaction) {
 		// Log interaction
@@ -66,7 +67,7 @@ module.exports = {
 				interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
 			}
 		} catch (error) {
-      logger(error, 'Error');
+      logger.error(error, 'Error');
 		}
 	}
 };

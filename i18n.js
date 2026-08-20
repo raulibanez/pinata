@@ -3,9 +3,10 @@ const { I18n, __ } = require('i18n');
 // Setup i18n
 const i18n = new I18n();
 i18n.configure({
-  locales: ['en', 'es'],
+  locales: ['en', 'es', 'it', 'fr'],
   defaultLocale: 'en',
-  directory: './locales'
+  directory: './locales',
+  updateFiles: false
 });
 
 // function translate

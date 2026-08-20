@@ -38,5 +38,6 @@
 	"Utiliza el comando `/late` para activar o desactivar el emparejamiento tardío.": "Usa il comando `/late` per attivare o disattivare l'accoppiamento tardivo.",
 	"No late match available": "Nessun match disponibile al momento 🥲",
 	"enabled": "Attivato",
-	"disabled": "Disattivato"
+	"disabled": "Disattivato",
+	"Algo ha ido mal 😵 Inténtalo de nuevo en unos minutos": "Qualcosa è andato storto 😵 Riprova tra qualche minuto"
 }

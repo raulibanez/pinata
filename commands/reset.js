@@ -28,6 +28,7 @@ module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('reset')
 		.setDescription('Remove history')
+		.setDMPermission(false)
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 	async execute(interaction) {
 		// Manage interaction
@@ -50,7 +51,7 @@ module.exports = {
 				interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
 			}
 		} catch (error) {
-      logger(error, 'Error');
+      logger.error(error, 'Error');
 		}
 	}
 };
