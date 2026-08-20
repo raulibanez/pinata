@@ -116,7 +116,8 @@ const lateMatchingModifiedMsg = (lang = 'en') => {
 }
 
 const currentLateMatchingMsg = (lateMatching, lang = 'en') => {
-    const value = lateMatching ? t(lateMatching, lang) : t('disabled', lang);
+    // Late matching is enabled by default
+    const value = lateMatching ? t(lateMatching, lang) : t('enabled', lang);
 
     const lateMatchingEmbed = new EmbedBuilder()
         .setColor('#0099ff')

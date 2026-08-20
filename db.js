@@ -155,7 +155,9 @@ const getMatchedUsersInRound = async (guild_id, timestamp) => {
 
 const recordLateMatch = async (guild_id, user1, user2, timestamp) => {
     const [first, second] = [user1, user2].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    const insert = await db.prepare('INSERT OR IGNORE INTO groups (guild_id, discord_id1, discord_id2, created) VALUES (?, ?, ?, ?)');
+    // Upsert: a repeated pair must get the current round date, otherwise /pinata
+    // (which looks up pairs by MAX(created)) would not find it
+    const insert = await db.prepare('INSERT INTO groups (guild_id, discord_id1, discord_id2, created) VALUES (?, ?, ?, ?) ON CONFLICT(guild_id, discord_id1, discord_id2) DO UPDATE SET created = excluded.created');
     await insert.run(guild_id, first, second, timestamp);
 }
 

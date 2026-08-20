@@ -354,32 +354,48 @@ describe('getGroupsAllowingRepeats', () => {
 });
 
 describe('findLateCandidate', () => {
+    // Helper: history row for a pair (sorted, like the DB stores them)
+    function pairRow(a, b, created) {
+        const [discord_id1, discord_id2] = [a, b].sort((x, y) => x.localeCompare(y, undefined, { numeric: true }));
+        return { discord_id1, discord_id2, created };
+    }
+
     test('should return a candidate when no history', () => {
-        const candidate = findLateCandidate('newUser', ['candidate1', 'candidate2'], {});
+        const candidate = findLateCandidate('newUser', ['candidate1', 'candidate2'], []);
         expect(['candidate1', 'candidate2']).toContain(candidate);
     });
 
     test('should return null when no candidates available', () => {
-        const candidate = findLateCandidate('newUser', [], {});
+        const candidate = findLateCandidate('newUser', [], []);
         expect(candidate).toBeNull();
     });
 
-    test('should skip candidates already in history', () => {
-        const history = buildHistory([['newUser', 'candidate1']]);
-        const candidate = findLateCandidate('newUser', ['candidate1', 'candidate2'], history);
+    test('should prefer candidates never paired with', () => {
+        const rows = [pairRow('newUser', 'candidate1', '0001')];
+        const candidate = findLateCandidate('newUser', ['candidate1', 'candidate2'], rows);
         expect(candidate).toBe('candidate2');
     });
 
-    test('should return null when all candidates are in history', () => {
-        const history = buildHistory([['newUser', 'candidate1'], ['newUser', 'candidate2']]);
-        const candidate = findLateCandidate('newUser', ['candidate1', 'candidate2'], history);
-        expect(candidate).toBeNull();
+    test('when all candidates are repeats, should pick the least recently paired', () => {
+        const rows = [
+            pairRow('newUser', 'candidate1', '0002'),
+            pairRow('newUser', 'candidate2', '0001'),
+            pairRow('newUser', 'candidate3', '0003'),
+        ];
+        const candidate = findLateCandidate('newUser', ['candidate1', 'candidate2', 'candidate3'], rows);
+        expect(candidate).toBe('candidate2');
     });
 
     test('should respect sorted ID order for history lookup', () => {
-        // 'aaa' < 'zzz' so history key is 'aaa' with value ['zzz']
-        const history = buildHistory([['zzz', 'aaa']]);
-        const candidate = findLateCandidate('zzz', ['aaa', 'bbb'], history);
+        // 'aaa' < 'zzz' so the row stores ('aaa', 'zzz')
+        const rows = [pairRow('zzz', 'aaa', '0001')];
+        const candidate = findLateCandidate('zzz', ['aaa', 'bbb'], rows);
         expect(candidate).toBe('bbb');
+    });
+
+    test('history of other members should not affect the candidate choice', () => {
+        const rows = [pairRow('candidate1', 'candidate2', '0001')];
+        const candidate = findLateCandidate('newUser', ['candidate1', 'candidate2'], rows);
+        expect(['candidate1', 'candidate2']).toContain(candidate);
     });
 });

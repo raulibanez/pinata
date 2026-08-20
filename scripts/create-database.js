@@ -48,9 +48,23 @@ console.error(err);
 }
 
 try {
-  db.exec(`ALTER TABLE guilds ADD COLUMN late_matching TEXT DEFAULT NULL`);
+  db.exec(`ALTER TABLE guilds ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'`);
 } catch (err) {
   // Column already exists
+}
+
+try {
+  db.exec(`ALTER TABLE guilds ADD COLUMN late_matching TEXT NOT NULL DEFAULT 'enabled'`);
+} catch (err) {
+  // Column already exists
+}
+
+// Late matching is enabled by default, also for guilds migrated
+// before the column had a default value
+try {
+  db.exec(`UPDATE guilds SET late_matching = 'enabled' WHERE late_matching IS NULL`);
+} catch (err) {
+  console.error(err);
 }
 
 db.close();

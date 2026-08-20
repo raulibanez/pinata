@@ -1,23 +1,30 @@
 require('dotenv').config({path: '../.env'});
-const { matchMsg, publicMatchMsg, userLeftMsg } = require('../messages.js');
+const { matchMsg, publicMatchMsg } = require('../messages.js');
 const { SlashCommandBuilder } = require('discord.js');
-const { getGuild, getMatch, getUsers, getHistory, getIgnores, getLatestMatchTimestamp, getMatchedUsersInRound, recordLateMatch } = require('../db.js');
+const { getGuild, getMatch, getUsers, getHistoryRows, getIgnores, getLatestMatchTimestamp, getMatchedUsersInRound, recordLateMatch } = require('../db.js');
 
 const logger = require('../logger');
 
 const { t } = require('../i18n');
 
-function findLateCandidate(memberId, unmatchedUsers, history) {
-    const shuffled = [...unmatchedUsers].sort(() => Math.random() - 0.5);
+function findLateCandidate(memberId, unmatchedUsers, rows) {
+    if (unmatchedUsers.length === 0) return null;
 
-    for (const id of shuffled) {
-        const [first, second] = [memberId, id].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-        if (!history[first] || !history[first].includes(second)) {
-            return id;
-        }
+    // Last time this member was paired with each user (if ever)
+    const lastPaired = {};
+    for (const row of rows) {
+        if (row.discord_id1 === memberId) lastPaired[row.discord_id2] = row.created;
+        if (row.discord_id2 === memberId) lastPaired[row.discord_id1] = row.created;
     }
 
-    return null;
+    // Prefer users this member has never been paired with
+    const fresh = unmatchedUsers.filter((id) => !lastPaired[id]);
+    if (fresh.length > 0) {
+        return fresh[Math.floor(Math.random() * fresh.length)];
+    }
+
+    // Everyone available is a repeat: pick the least recently paired one
+    return unmatchedUsers.reduce((oldest, id) => (lastPaired[id] < lastPaired[oldest] ? id : oldest));
 }
 
 async function tryLateMatch(interaction) {
@@ -39,8 +46,8 @@ async function tryLateMatch(interaction) {
 
     if (unmatchedUsers.length === 0) return null;
 
-    const history = await getHistory(interaction);
-    const candidate = findLateCandidate(member_id, unmatchedUsers, history);
+    const rows = await getHistoryRows(guild_id);
+    const candidate = findLateCandidate(member_id, unmatchedUsers, rows);
 
     if (candidate) {
         await recordLateMatch(guild_id, member_id, candidate, latestTimestamp);
@@ -67,7 +74,8 @@ async function pinata(interaction) {
     let match = await getMatch(interaction);
 
     // Late matching: try to pair with another unmatched user
-    if (match.length === 0 && guild.late_matching === 'enabled') {
+    // Enabled by default unless the guild explicitly disabled it
+    if (match.length === 0 && guild.late_matching !== 'disabled') {
         const lateCandidate = await tryLateMatch(interaction);
         if (lateCandidate) {
             match = [lateCandidate];
@@ -78,13 +86,19 @@ async function pinata(interaction) {
     switch (match.length) {
         case 0:
             // No match found
-            const noMatchKey = guild.late_matching === 'enabled' ? 'No late match available' : 'No match found';
+            const noMatchKey = guild.late_matching !== 'disabled' ? 'No late match available' : 'No match found';
             await interaction.reply({ content: t(noMatchKey, guild.language), ephemeral: (guild.visibility !== 'public') });
             return;
         case 1:
             // Match found
-            const member = await interaction.guild.members.fetch(match[0]);
-            avatarURL = member.displayAvatarURL();
+            try {
+                const member = await interaction.guild.members.fetch(match[0]);
+                avatarURL = member.displayAvatarURL();
+            } catch (error) {
+                // The matched member left the server
+                await interaction.reply({ content: t('La persona que te había tocado ya no se encuentra en el servidor 😔', guild.language), ephemeral: (guild.visibility !== 'public') });
+                return;
+            }
             break;
         case 2:
             // Group of 3 found
@@ -92,15 +106,21 @@ async function pinata(interaction) {
             break;
     }
 
-    // Get display names
+    // Get display names, skipping members who left the server
     let matchNames = [];
     for (const id of match) {
         try {
             const member = await interaction.guild.members.fetch(id);
             matchNames.push(member.displayName);
         } catch (error) {
-            await interaction.reply({ content: t('La persona que te había tocado ya no se encuentra en el servidor 😔', guild.language), ephemeral: (guild.visibility !== 'public') });
+            // Member left the server since the round was created
         }
+    }
+
+    if (matchNames.length === 0) {
+        // Everyone in the group left the server
+        await interaction.reply({ content: t('La persona que te había tocado ya no se encuentra en el servidor 😔', guild.language), ephemeral: (guild.visibility !== 'public') });
+        return;
     }
 
     if (guild.visibility === 'public') {

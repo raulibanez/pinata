@@ -37,7 +37,7 @@ module.exports = {
 		.setDescription('Enable or disable late matching for users who join after the piñata')
 		.addStringOption(option =>
 			option.setName('mode')
-				.setDescription('Enable or disable late matching (Default: enabled for new servers)')
+				.setDescription('Enable or disable late matching (Default: enabled)')
 				.setRequired(false)
 				.addChoices(
 					{ name: 'Enabled', value: 'enabled' },
