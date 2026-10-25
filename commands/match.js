@@ -113,7 +113,8 @@ async function matchUsers(interaction) {
   // Get users
   let users = await getUsers(interaction);
 
-  logger.info(users, 'Users');
+  // Log only how many: the list holds every member's display name
+  logger.info({ count: Object.keys(users).length }, 'Users');
 
   // Remove ignored users
   ignore.forEach((id) => { delete users[id] });
@@ -192,7 +193,7 @@ module.exports = {
     // Manage interaction
     try {
       // Check if the user is authorized (aka admin)
-      if (interaction.member.permissions.has('ADMINISTRATOR')) {
+      if (interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         await pinata(interaction);
       } else {
         // Logging unauthorized command attempt

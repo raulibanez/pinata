@@ -47,7 +47,7 @@ module.exports = {
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 	async execute(interaction) {
 		try {
-			if (interaction.member.permissions.has('ADMINISTRATOR')) {
+			if (interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
 				await late(interaction);
 			} else {
 				logger.info(

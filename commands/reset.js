@@ -21,7 +21,7 @@ async function reset(interaction) {
 
 	await resetHistory(interaction);
 
-	interaction.reply({ content: t('User pairing history has been removed', guild.language), ephemeral: true });
+	await interaction.reply({ content: t('User pairing history has been removed', guild.language), ephemeral: true });
 }
 
 module.exports = {
@@ -34,7 +34,7 @@ module.exports = {
 		// Manage interaction
 		try {
 			// Check if the user is authorized (aka admin)
-			if (interaction.member.permissions.has('ADMINISTRATOR')) {
+			if (interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
 				await reset(interaction);
 			} else {
 				// Logging unauthorized command attempt
@@ -48,7 +48,7 @@ module.exports = {
 					'Unauthorized user'
 				);
 
-				interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
+				await interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
 			}
 		} catch (error) {
       logger.error(error, 'Error');

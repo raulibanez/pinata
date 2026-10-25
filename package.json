@@ -29,7 +29,7 @@
     "pino-pretty": "^9.1.0"
   },
   "devDependencies": {
-    "jest": "^30.3.0"
+    "jest": "^29.7.0"
   },
   "overrides": {
     "@discordjs/rest": "2.2.0",

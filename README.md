@@ -63,7 +63,7 @@ NUM_INTROS=10
 1. Go to Discord Developer Portal.
 2. Create a new application and name it as you wish (e.g. Piñata).
 3. Under the “Bot” tab, create a new bot and retrieve your BOT_TOKEN.
-4. Enable the members and presence intents in the bot settings.
+4. Enable the Server Members intent in the bot settings (the Presence intent is not needed).
 
 ## Database & Command Deployment
 
@@ -87,6 +87,10 @@ For production environments, it is recommended to use pm2 as a process manager f
 ## Data Purge
 
 Piñata respects privacy and manages data efficiently through a data purge mechanism. A script located at `scripts/purge-database.js` is designed to delete data related to guilds and their members from which the bot has been removed. This script will purge data from guilds that have been inactive for 24 hours. However, please note that this script does not run automatically. It needs to be scheduled to run daily using a task scheduler like cron jobs or similar tools. This ensures that any data related to a guild or its members is not retained unnecessarily, aligning with our commitment to privacy and efficient data management.
+
+Run it from the bot's folder, since it opens `pinata.db` with a relative path (e.g. `cd /path/to/pinata && /path/to/node scripts/purge-database.js` in the crontab, with the full path to `node` if it was installed with nvm).
+
+Older versions left pairing history and ignore lists of unregistered guilds behind. After upgrading, restart the bot first (so it registers its guilds) and then delete them once with `node scripts/purge-database.js --orphans`.
 
 ## License
 

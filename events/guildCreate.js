@@ -18,22 +18,27 @@ module.exports = {
 			'Guild join'
 		);
 
-		// Existing guild ?
-		if (!await getGuild(guild.id)) {
-			// New user
-			addGuild(guild)
-		} else {
-			// Update guild attributes
-			await updateGuild(
-				guild.id,
-				{
-					guild_name: guild.name,
-					owner_id: guild.ownerId,
-					member_count: guild.memberCount,
-					premium_tier: guild.premiumTier,
-					active: 1,
-					left_at: null,
-				});
+		// A database error must not crash the bot (unhandled rejection)
+		try {
+			// Existing guild ?
+			if (!await getGuild(guild.id)) {
+				// New user
+				await addGuild(guild);
+			} else {
+				// Update guild attributes
+				await updateGuild(
+					guild.id,
+					{
+						guild_name: guild.name,
+						owner_id: guild.ownerId,
+						member_count: guild.memberCount,
+						premium_tier: guild.premiumTier,
+						active: 1,
+						left_at: null,
+					});
+			}
+		} catch (error) {
+			logger.error(error, 'Error');
 		}
 	},
 };

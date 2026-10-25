@@ -74,6 +74,10 @@ async function pinata(interaction) {
     // Get guild
     const guild = await getGuild(interaction.guild.id);
 
+    // Defer reply: late matching may download the member list, which in big
+    // servers can take longer than the 3 seconds Discord gives to answer
+    await interaction.deferReply({ ephemeral: (guild.visibility !== 'public') });
+
     // Get match
     let match = await getMatch(interaction);
 
@@ -91,7 +95,7 @@ async function pinata(interaction) {
         case 0:
             // No match found
             const noMatchKey = guild.late_matching !== 'disabled' ? 'No late match available' : 'No match found';
-            await interaction.reply({ content: t(noMatchKey, guild.language), ephemeral: (guild.visibility !== 'public') });
+            await interaction.editReply({ content: t(noMatchKey, guild.language) });
             return;
         case 1:
             // Match found
@@ -100,7 +104,7 @@ async function pinata(interaction) {
                 avatarURL = member.displayAvatarURL();
             } catch (error) {
                 // The matched member left the server
-                await interaction.reply({ content: t('La persona que te había tocado ya no se encuentra en el servidor 😔', guild.language), ephemeral: (guild.visibility !== 'public') });
+                await interaction.editReply({ content: t('La persona que te había tocado ya no se encuentra en el servidor 😔', guild.language) });
                 return;
             }
             break;
@@ -123,14 +127,14 @@ async function pinata(interaction) {
 
     if (matchNames.length === 0) {
         // Everyone in the group left the server
-        await interaction.reply({ content: t('La persona que te había tocado ya no se encuentra en el servidor 😔', guild.language), ephemeral: (guild.visibility !== 'public') });
+        await interaction.editReply({ content: t('La persona que te había tocado ya no se encuentra en el servidor 😔', guild.language) });
         return;
     }
 
     if (guild.visibility === 'public') {
-        await interaction.reply({ embeds: [publicMatchMsg(interaction.member.id, matchNames, avatarURL, guild.language)], ephemeral: false });
+        await interaction.editReply({ embeds: [publicMatchMsg(interaction.member.id, matchNames, avatarURL, guild.language)] });
     } else {
-        await interaction.reply({ embeds: [matchMsg(interaction.member.id, matchNames, avatarURL, guild.language)], ephemeral: true });
+        await interaction.editReply({ embeds: [matchMsg(interaction.member.id, matchNames, avatarURL, guild.language)] });
     }
 }
 
@@ -150,8 +154,13 @@ module.exports = {
 			// Inform the user instead of leaving the interaction unanswered
 			try {
 				const content = t('Algo ha ido mal 😵 Inténtalo de nuevo en unos minutos');
-				if (interaction.deferred || interaction.replied) {
+				if ((interaction.deferred || interaction.replied) && interaction.ephemeral) {
 					await interaction.editReply({ content });
+				} else if (interaction.deferred || interaction.replied) {
+					// Public deferred reply (visibility public): replace it with a
+					// private message so the error isn't shown in the channel
+					await interaction.deleteReply().catch(() => {});
+					await interaction.followUp({ content, ephemeral: true });
 				} else {
 					await interaction.reply({ content, ephemeral: true });
 				}

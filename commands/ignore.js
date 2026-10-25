@@ -31,25 +31,24 @@ module.exports = {
 				member_name: interaction.member.user.username,
 				subcommand: interaction.options.getSubcommand(),
 				ignore_id: interaction.options.getUser('user', true).id,
-				ignore_name: interaction.options.getUser('user', true).username,
 			},'Ignore command executed'
 		); 
 
 		// Manage interaction
 		try {
 			// Check if the user is authorized (aka admin)
-			if (interaction.member.permissions.has('ADMINISTRATOR')) {
+			if (interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
 				switch (interaction.options.getSubcommand()) {
 					case 'add':
 						await ignoreUser(interaction);
-						interaction.reply({ content: `User <@${interaction.options.getUser('user', true).id}> has been added to the ignore list`, ephemeral: true });
+						await interaction.reply({ content: `User <@${interaction.options.getUser('user', true).id}> has been added to the ignore list`, ephemeral: true });
 						break;
 					case 'remove':
 						await unignoreUser(interaction);
-						interaction.reply({ content: `User <@${interaction.options.getUser('user', true).id}> has been removed from the ignore list`, ephemeral: true });
+						await interaction.reply({ content: `User <@${interaction.options.getUser('user', true).id}> has been removed from the ignore list`, ephemeral: true });
 						break;
 					default:
-						interaction.reply({ content: 'Subcommand not recognised', ephemeral: true });
+						await interaction.reply({ content: 'Subcommand not recognised', ephemeral: true });
 						break;
 				}
 			} else {
@@ -64,7 +63,7 @@ module.exports = {
 					'Unauthorized user'
 				);
 
-				interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
+				await interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
 			}
 		} catch (error) {
       logger.error(error, 'Error');

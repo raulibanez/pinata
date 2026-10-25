@@ -20,11 +20,50 @@ const getMatch = async (interaction) => {
     return rows.map(row => row.discord_id1 === member_id ? row.discord_id2 : row.discord_id1);
 }
 
+// Discord only allows requesting the full member list once per guild every 30 seconds.
+// Otherwise it answers RATE_LIMITED, which discord.js 14.14 doesn't handle: it waits
+// 2 minutes and fails with GuildMembersTimeout
+const MEMBERS_FETCH_COOLDOWN = 30e3;
+// Keyed by Guild object, so entries go away with the guild when the bot leaves it
+const membersFetches = new WeakMap();
+
+const fetchAllMembers = async (guild) => {
+    const last = membersFetches.get(guild);
+
+    // performance.now() is monotonic: clock adjustments can't shorten or extend the window
+    if (last && performance.now() - last.time < MEMBERS_FETCH_COOLDOWN) {
+        // Reuse the recent request (waiting for it if still in flight).
+        // The GuildMembers intent keeps the cache up to date afterwards
+        await last.request;
+        return guild.members.cache;
+    }
+
+    // Keep only the completion, not the fetched members (they are in the cache anyway)
+    const request = guild.members.fetch().then(() => {});
+    membersFetches.set(guild, { time: performance.now(), request });
+
+    // A failed request must not be reused: the next call tries again.
+    // This catch also avoids an unhandled rejection when nobody else waits for it
+    request.catch(() => {
+        if (membersFetches.get(guild)?.request === request) membersFetches.delete(guild);
+    });
+
+    await request;
+    return guild.members.cache;
+}
+
+// discord.js empties the member cache when a guild becomes available again (after a
+// Discord outage or a new session) and refills it with just a few members, so the
+// next call must download the full list again
+const forgetMembersFetch = (guild) => {
+    membersFetches.delete(guild);
+}
+
 const getUsers = async (interaction) => {
     let users = {};
 
     // Retrieve all guild members
-    const members = await interaction.guild.members.fetch();
+    const members = await fetchAllMembers(interaction.guild);
 
     // Verify user can see that channel
     for (let [snowflake, guildMember] of members) {
@@ -88,11 +127,48 @@ const addGuild = async (guild) => {
     await stmt.run(guild.id, guild.name, guild.ownerId, guild.memberCount, 0, guild.premiumTier, 1, guild.description, 'en', crypto.randomBytes(32).toString('base64'), new Date().toISOString(), 'enabled');
 }
 
+const getGuilds = async () => {
+    const stmt = await db.prepare('SELECT guild_id, guild_name, active FROM `guilds`');
+    return await stmt.all();
+}
+
 const getGuild = async (id) => {
     const stmt = await db.prepare('SELECT * FROM `guilds` WHERE guild_id = ?').bind(id);
     const row = await stmt.get();
 
     return row;
+}
+
+// Guild settings for an interaction. Registers the guild if it has no row (it added the
+// bot while it was offline or during startup) and reactivates it if it's marked as left
+// (an interaction proves the bot is still there, so it must not be purged)
+const getOrAddGuild = async (guild) => {
+    const row = await getGuild(guild.id);
+    if (row && row.active) return row;
+
+    if (row) {
+        logger.info({ guild_id: guild.id, guild_name: guild.name }, 'Guild reactivated on use');
+        // Same attributes guildCreate refreshes when a guild comes back
+        await updateGuild(guild.id, {
+            guild_name: guild.name,
+            owner_id: guild.ownerId,
+            member_count: guild.memberCount,
+            premium_tier: guild.premiumTier,
+            active: 1,
+            left_at: null,
+        });
+    } else {
+        logger.info({ guild_id: guild.id, guild_name: guild.name }, 'Guild registered on use');
+
+        try {
+            await addGuild(guild);
+        } catch (error) {
+            // Two interactions at the same time: the other one registered it first
+            if (error.code !== 'SQLITE_CONSTRAINT_PRIMARYKEY') throw error;
+        }
+    }
+
+    return await getGuild(guild.id);
 }
 
 const updateGuild = async (id, update) => {
@@ -163,13 +239,17 @@ const recordLateMatch = async (guild_id, user1, user2, timestamp) => {
 
 module.exports = {
     getMatch,
+    fetchAllMembers,
+    forgetMembersFetch,
     getUsers,
     getHistory,
     getHistoryRows,
     recordGroups,
     resetHistory,
     addGuild,
+    getGuilds,
     getGuild,
+    getOrAddGuild,
     updateGuild,
     ignoreUser,
     unignoreUser,

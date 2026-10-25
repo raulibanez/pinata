@@ -31,7 +31,6 @@ async function visibility(interaction) {
 		await updateGuild(interaction.guild.id, { visibility: visibility });
 		await interaction.reply({ content: visibilityModifiedMsg(guild.language), ephemeral: true })
 	} else {
-        console.log('here');
 		await interaction.reply({ embeds: [currentVisibilityMsg(guild.visibility, guild.language)], ephemeral: true })
 	}
 }
@@ -54,7 +53,7 @@ module.exports = {
 		// Manage interaction
 		try {
 			// Check if the user is authorized (aka admin)
-			if (interaction.member.permissions.has('ADMINISTRATOR')) {
+			if (interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
 				await visibility(interaction);
 			} else {
 				// Logging unauthorized command attempt
@@ -68,7 +67,7 @@ module.exports = {
 					'Unauthorized user'
 				);
 
-				interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
+				await interaction.reply({ content: t('Permission required to execute this command'), ephemeral: true });
 			}
 		} catch (error) {
       logger.error(error, 'Error');
